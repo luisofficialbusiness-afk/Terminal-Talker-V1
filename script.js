@@ -3,6 +3,7 @@ const input = document.getElementById("input");
 
 let isAdmin = false;
 let isOwner = false;
+let terminalUsername = "Guest";
 let lastMessageTimestamp = 0;
 let modActions = [];
 let globalMessages = [];
@@ -12,9 +13,10 @@ function print(text) {
   terminal.scrollTop = terminal.scrollHeight;
 }
 
-function printRoleBadge() {
-  if (isOwner) print("<span class='owner-badge'>[OWNER]</span>");
-  else if (isAdmin) print("<span class='admin-badge'>[ADMIN]</span>");
+function printBadge() {
+  if (isOwner) return "<span class='owner-badge'>[OWNER]</span>";
+  if (isAdmin) return "<span class='admin-badge'>[ADMIN]</span>";
+  return "";
 }
 
 print("Terminal online. Type !help");
@@ -22,20 +24,16 @@ print("Terminal online. Type !help");
 setInterval(fetchMessages, 3000);
 
 async function fetchMessages() {
-  try {
-    const res = await fetch("/api/messages");
-    const data = await res.json();
+  const res = await fetch("/api/messages");
+  const data = await res.json();
 
-    data.messages.forEach(msg => {
-      if (msg.timestamp > lastMessageTimestamp) {
-        print(msg.content);
-        lastMessageTimestamp = msg.timestamp;
-        globalMessages.push(msg.content);
-      }
-    });
-  } catch (err) {
-    console.error("Error fetching messages:", err);
-  }
+  data.messages.forEach(msg => {
+    if (msg.timestamp > lastMessageTimestamp) {
+      print(msg.content);
+      lastMessageTimestamp = msg.timestamp;
+      globalMessages.push(msg.content);
+    }
+  });
 }
 
 input.addEventListener("keydown", async (e) => {
@@ -43,186 +41,137 @@ input.addEventListener("keydown", async (e) => {
 
   const cmd = input.value.trim();
   input.value = "";
-  print("> " + cmd);
-  printRoleBadge();
+
+  print(`<span class="username">[${terminalUsername}]</span> ${printBadge()} &gt; ${cmd}`);
 
   if (!cmd) return;
 
-  // HELP
+  /* ================= USERNAME SET ================= */
+  if (cmd.startsWith("!usernameset ")) {
+    const name = cmd.slice(13).trim();
+    if (!name || name.length > 20) {
+      print("Invalid username (1–20 chars).");
+      return;
+    }
+    terminalUsername = name;
+    print(`Username set to "${terminalUsername}"`);
+    return;
+  }
+
+  /* ================= HELP ================= */
   if (cmd === "!help") {
     print("Commands:");
-    print("!help - show commands");
-    print("!login <password> - login as admin");
-    print("!ownlogin <password> - login as owner");
-    print("!logout - logout");
-    print("!clear - clear terminal");
-    print("!ping - test terminal");
-    print("!echo <msg> - print message");
-    print("!time - server time (admin only)");
-    print("!whoami - visitor info (admin only)");
-    print("!say <msg> - send to Discord (admin only)");
-    print("!mod <action> <username1> <username2> ... - moderation (admin only)");
-    print("Owner commands:");
-    print("!history1 - see message history");
-    print("!history2 - see mod action history");
-    print("!globalmessage <msg> - send global message");
+    print("!usernameset <name>");
+    print("!login admin01");
+    print("!ownlogin STUC02526");
+    print("!logout");
+    print("!say <message>");
+    print("!mod kick/ban <users>");
+    print("!history1 (OWNER)");
+    print("!history2 (OWNER)");
+    print("!globalmessage <msg> (OWNER)");
     return;
   }
 
-  // LOGIN - Admin
+  /* ================= LOGIN ================= */
   if (cmd.startsWith("!login ")) {
-    const pass = cmd.slice(7);
-    if (pass === "admin01") {
+    if (cmd.slice(7) === "admin01") {
       isAdmin = true;
       isOwner = false;
-      print("Login successful. Admin access granted.");
-      printRoleBadge();
+      print("Admin login successful.");
     } else {
-      print("Login failed. Incorrect password.");
+      print("Wrong admin password.");
     }
     return;
   }
 
-  // LOGIN - Owner
   if (cmd.startsWith("!ownlogin ")) {
-    const pass = cmd.slice(10);
-    if (pass === "STUC02526") {
+    if (cmd.slice(10) === "STUC02526") {
       isOwner = true;
       isAdmin = true;
-      print("Login successful. Owner access granted.");
-      printRoleBadge();
+      print("Owner login successful.");
     } else {
-      print("Login failed. Incorrect password.");
+      print("Wrong owner password.");
     }
     return;
   }
 
-  // LOGOUT
   if (cmd === "!logout") {
-    if (!isAdmin && !isOwner) print("You are not logged in.");
-    else {
-      isAdmin = false;
-      isOwner = false;
-      print("Logged out. Access revoked.");
-    }
+    isAdmin = false;
+    isOwner = false;
+    print("Logged out.");
     return;
   }
 
-  // CLEAR
-  if (cmd === "!clear") {
-    terminal.innerHTML = "";
-    return;
-  }
-
-  // PING
-  if (cmd === "!ping") {
-    print("pong 🟢");
-    return;
-  }
-
-  // ECHO
-  if (cmd.startsWith("!echo ")) {
-    print(cmd.slice(6));
-    return;
-  }
-
-  // Admin/Owner permission check
-  const adminCmds = ["!say", "!time", "!whoami", "!mod"];
-  const ownerCmds = ["!history1", "!history2", "!globalmessage"];
-  if (!isAdmin && adminCmds.some(c => cmd.startsWith(c))) {
-    print("Permission denied. Admin only.");
-    return;
-  }
-  if (!isOwner && ownerCmds.some(c => cmd.startsWith(c))) {
-    print("Permission denied. Owner only.");
-    return;
-  }
-
-  // SAY
+  /* ================= SAY ================= */
   if (cmd.startsWith("!say ")) {
+    if (!isAdmin) {
+      print("Admin only.");
+      return;
+    }
+
     await fetch("/api/say", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ message: cmd.slice(5) })
+      body: JSON.stringify({
+        message: `[${terminalUsername}] ${cmd.slice(5)}`
+      })
     });
-    print("Message sent to Discord.");
+
+    print("Message sent.");
     return;
   }
 
-  // TIME & WHOAMI
-  if (cmd === "!time") {
-    print(new Date().toLocaleString());
-    return;
-  }
-  if (cmd === "!whoami") {
-    print("Visitor info: simulated");
-    return;
-  }
-
-  // MODERATION
+  /* ================= MODERATION ================= */
   if (cmd.startsWith("!mod ")) {
-    const parts = cmd.split(" ");
-    if (parts.length < 3) {
-      print("Usage: !mod <action> <username1> <username2> ...");
-    } else {
-      const action = parts[1].toLowerCase();
-      const usernames = parts.slice(2);
-
-      if (action === "kick" || action === "ban") {
-        usernames.forEach(async (username) => {
-          print(`User "${username}" has been ${action}ed (simulated).`);
-
-          // Store mod action
-          modActions.push(`[${new Date().toLocaleString()}] Admin ${action}ed user ${username}`);
-          if (modActions.length > 100) modActions.shift();
-
-          // Main channel webhook
-          await fetch("/api/say", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ message: `[MODERATION] Admin ${action}ed user ${username}` })
-          });
-
-          // Mod-log webhook
-          await fetch("/api/say", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              message: `[LOG] Admin ${action}ed user ${username} at ${new Date().toLocaleString()}`,
-              webhook: "https://discord.com/api/webhooks/1458229518861861081/RxK9QPitWn61df7BuSuXDjc-_BPvlHcpr8ORa5S-OmWU48HUpzuHbTu8yx3jnqbSTRDD"
-            })
-          });
-        });
-      } else {
-        print("Unknown moderation action. Use kick or ban.");
-      }
+    if (!isAdmin) {
+      print("Admin only.");
+      return;
     }
+
+    const parts = cmd.split(" ");
+    const action = parts[1];
+    const users = parts.slice(2);
+
+    users.forEach(async user => {
+      modActions.push(`${action.toUpperCase()} ${user}`);
+      await fetch("/api/say", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          message: `[MOD] ${terminalUsername} ${action}ed ${user}`,
+          webhook: "https://discord.com/api/webhooks/1458229518861861081/RxK9QPitWn61df7BuSuXDjc-_BPvlHcpr8ORa5S-OmWU48HUpzuHbTu8yx3jnqbSTRDD"
+        })
+      });
+    });
+
+    print("Moderation action sent.");
     return;
   }
 
-  // OWNER ONLY
-  if (cmd === "!history1") {
-    print("Message history:");
+  /* ================= OWNER ================= */
+  if (cmd === "!history1" && isOwner) {
     globalMessages.forEach(m => print(m));
     return;
   }
 
-  if (cmd === "!history2") {
-    print("Mod actions history:");
+  if (cmd === "!history2" && isOwner) {
     modActions.forEach(m => print(m));
     return;
   }
 
-  if (cmd.startsWith("!globalmessage ")) {
-    const msg = cmd.slice(15);
+  if (cmd.startsWith("!globalmessage ") && isOwner) {
     await fetch("/api/say", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ message: `[GLOBAL] ${msg}` })
+      body: JSON.stringify({
+        message: `[GLOBAL] ${cmd.slice(15)}`
+      })
     });
-    print("Global message sent to Discord.");
+    print("Global message sent.");
     return;
   }
 
-  print("Unknown command. Type !help");
+  print("Unknown command.");
 });
+
