@@ -1,0 +1,34 @@
+body {
+  margin: 0;
+  background: black;
+  color: lime;
+  font-family: monospace;
+}
+
+#terminal {
+  height: 95vh;
+  overflow-y: auto;
+  padding: 10px;
+}
+
+#input {
+  width: 100%;
+  height: 5vh;
+  background: black;
+  color: lime;
+  border: none;
+  outline: none;
+  font-family: monospace;
+  font-size: 16px;
+  padding: 5px;
+}
+
+.admin-badge {
+  color: cyan;
+  font-weight: bold;
+}
+
+.owner-badge {
+  color: yellow;
+  font-weight: bold;
+}
