@@ -63,6 +63,8 @@ input.addEventListener("keydown", async (e)=>{
   print(`[${terminalUsername}] ${badge()} ${roomBadge()} > ${cmd}`, true);
 
   if(cmd.startsWith("!")){
+
+    // ---------------- HELP ----------------
     if(cmd === "!help"){
       print("💻 Terminal Talker V4 Commands 💻");
       print("!usernameset <name> — Set your username");
@@ -76,6 +78,8 @@ input.addEventListener("keydown", async (e)=>{
       print("!mute <user> <seconds> — Admin only");
       print("!lockdown — Admin only");
       print("!system <message> — Admin only system message");
+      print("!saysystem <message> — Owner only System message");
+      print("!resetserver — Owner only, resets all messages");
       print("!history1 — Owner only, view chat history");
       print("!history2 — Owner only, view mod log history");
       print("!globalmessage <message> — Owner only, broadcast global message");
@@ -83,6 +87,7 @@ input.addEventListener("keydown", async (e)=>{
       return;
     }
 
+    // ---------------- USERNAME ----------------
     if(cmd.startsWith("!usernameset ")){ terminalUsername=cmd.slice(13).trim().slice(0,20); localStorage.setItem("username",terminalUsername); print(`Username set to "${terminalUsername}"`); return; }
     if(cmd==="!login admin01"){ isAdmin=true; isOwner=false; print("Admin logged in."); return;}
     if(cmd==="!ownlogin STUC02526"){ isAdmin=true; isOwner=true; print("Owner logged in."); return;}
@@ -97,10 +102,29 @@ input.addEventListener("keydown", async (e)=>{
     if(cmd==="!lockdown" && isAdmin){ ws.send(JSON.stringify({action:"lockdown", status:true})); print("Lockdown activated for all users!"); return;}
     if(cmd.startsWith("!system ")){ if(!isAdmin){print("Admin only."); return;} print(`<span class="system">[SYSTEM] ${cmd.slice(8)}</span>`); return;}
     if(cmd.startsWith("!edit last ")){ if(!lastUserLine){ print("Nothing to edit."); return;} lastUserLine.innerHTML=`[${terminalUsername}] ${badge()} ${roomBadge()} > ${cmd.slice(11)}`; return;}
-    
+
+    // ---------------- SAY SYSTEM ----------------
+    if(cmd.startsWith("!saysystem ")){
+      if(!isOwner){ print("Owner only command."); return; }
+      const message = cmd.slice(11).trim();
+      if(!message){ print("Usage: !saysystem <message>"); return; }
+      ws.send(JSON.stringify({ action:"say", room:currentRoom, user:"System", message }));
+      print(`[System] ${message}`);
+      return;
+    }
+
+    // ---------------- RESET SERVER ----------------
+    if(cmd==="!resetserver"){
+      if(!isOwner){ print("Owner only command."); return; }
+      ws.send(JSON.stringify({ action:"resetServer" }));
+      print("✅ Server has been reset. All messages cleared!");
+      return;
+    }
+
     print("Unknown command."); return;
   }
 
+  // ---------------- NORMAL MESSAGE ----------------
   if(isMuted(terminalUsername)){ print("You are muted."); return; }
   ws.send(JSON.stringify({action:"say", room:currentRoom, user:terminalUsername, message:cmd}));
 });
