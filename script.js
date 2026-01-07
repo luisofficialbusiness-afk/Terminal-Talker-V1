@@ -142,7 +142,7 @@ input.addEventListener("keydown", async e => {
 sidebarButtons.forEach(btn => {
   btn.addEventListener("click", () => {
     const action = btn.dataset.action;
-    if (action === "themes") printLocal("Use !theme <theme-name> to change theme.");
+    if (action === "themes") printLocal("Use !theme <theme-name> to change theme. (classic, matrix, cyberpunk, ocean, amber, solarized,forest,candy,twilight,minimal, and neon (Beta Only )");
     if (action === "report") printLocal("Report: Use Discord server link or type your report message.");
     if (action === "discord") window.open("https://discord.gg/kt4ySqjpbs", "_blank");
   });
