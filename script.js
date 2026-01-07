@@ -7,17 +7,18 @@ let isAdmin = false;
 let isOwner = false;
 let mutedUsers = {};
 let currentRoom = "general";
+let lockdownActive = false;
 
 /* ---------------- UTILITY ---------------- */
-function print(html, track=false) {
-  const line = document.createElement("div");
-  line.innerHTML = html;
+function print(html, track=false){
+  const line=document.createElement("div");
+  line.innerHTML=html;
   terminal.appendChild(line);
-  terminal.scrollTop = terminal.scrollHeight;
-  if(track) lastUserLine = line;
+  terminal.scrollTop=terminal.scrollHeight;
+  if(track) lastUserLine=line;
 }
-function badge() { if(isOwner) return "<span class='owner-badge'>[OWNER]</span>"; if(isAdmin) return "<span class='admin-badge'>[ADMIN]</span>"; return ""; }
-function roomBadge() { return `<span class='room-badge'>[${currentRoom}]</span>`; }
+function badge(){ if(isOwner) return "<span class='owner-badge'>[OWNER]</span>"; if(isAdmin) return "<span class='admin-badge'>[ADMIN]</span>"; return ""; }
+function roomBadge(){ return `<span class='room-badge'>[${currentRoom}]</span>`; }
 function isMuted(user){ const t=mutedUsers[user]; if(!t) return false; if(Date.now()>t){ delete mutedUsers[user]; return false; } return true; }
 
 /* ---------------- THEMES ---------------- */
@@ -27,23 +28,40 @@ applyTheme(localStorage.getItem("theme")||"green");
 print("Terminal Talker V4 online. Type !help");
 
 /* ---------------- WEBSOCKET ---------------- */
-const protocol = location.protocol === "https:" ? "wss" : "ws";
-const ws = new WebSocket(`${protocol}://${location.host}/api/rooms`);
+const protocol=location.protocol==="https:"?"wss":"ws";
+const ws=new WebSocket(`${protocol}://${location.host}/api/rooms`);
 
-ws.onmessage = (event)=>{
-  const data = JSON.parse(event.data);
-  if(data.room!==currentRoom) return; // only show messages from current room
-  print(data.content);
+ws.onmessage=(event)=>{
+  const data=JSON.parse(event.data);
+
+  // Lockdown
+  if(data.lockdown!==undefined){
+    lockdownActive=data.lockdown;
+    document.getElementById("lockdown-overlay").style.display=lockdownActive?"flex":"none";
+  }
+
+  if(data.room!==currentRoom) return;
+  if(data.content) print(data.content);
 };
+
+/* ---------------- LOCKDOWN SUBMIT ---------------- */
+document.getElementById("lockdown-submit").addEventListener("click", ()=>{
+  const code=document.getElementById("lockdown-code").value;
+  if(code==="749262001"){
+    ws.send(JSON.stringify({action:"lockdown", status:false}));
+    lockdownActive=false;
+    document.getElementById("lockdown-overlay").style.display="none";
+  }else alert("Incorrect code");
+});
 
 /* ---------------- COMMAND HANDLER ---------------- */
 input.addEventListener("keydown", async(e)=>{
   if(e.key!=="Enter") return;
-  const cmd = input.value.trim(); input.value="";
+  if(lockdownActive){ e.preventDefault(); return; } // block during lockdown
+  const cmd=input.value.trim(); input.value="";
   print(`[${terminalUsername}] ${badge()} ${roomBadge()} &gt; ${cmd}`,true);
   if(!cmd) return;
 
-  /* ---------------- HELP ---------------- */
   if(cmd==="!help"){
     print("!usernameset <name>");
     print("!login admin01");
@@ -59,6 +77,7 @@ input.addEventListener("keydown", async(e)=>{
     print("!history1 (OWNER)");
     print("!history2 (OWNER)");
     print("!globalmessage <msg> (OWNER)");
+    print("!lockdown (ADMIN)");
     return;
   }
 
@@ -114,6 +133,13 @@ input.addEventListener("keydown", async(e)=>{
   if(cmd==="!history1"&&isOwner){ ws.send(JSON.stringify({action:"history1", room:currentRoom})); return;}
   if(cmd==="!history2"&&isOwner){ ws.send(JSON.stringify({action:"history2", room:currentRoom})); return;}
   if(cmd.startsWith("!globalmessage ")&&isOwner){ ws.send(JSON.stringify({action:"global", room:currentRoom, message:cmd.slice(15)})); return;}
+
+  /* ---------------- LOCKDOWN ---------------- */
+  if(cmd==="!lockdown" && isAdmin){
+    ws.send(JSON.stringify({action:"lockdown", status:true}));
+    print("Lockdown activated for all users!");
+    return;
+  }
 
   print("Unknown command.");
 });
