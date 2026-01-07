@@ -156,7 +156,7 @@ input.addEventListener("keydown", async (e)=>{
     // ---------------- BETA LOGIN ----------------
     if(cmd.startsWith("!betalogin ")){
       const code = cmd.slice(11).trim();
-      if(code==="BETA2026"){ isBeta=true; print("✅ Beta Tester badge activated!"); } 
+      if(code==="Beta#027"){ isBeta=true; print("✅ Beta Tester badge activated!"); } 
       else print("❌ Invalid beta code.");
       return;
     }
