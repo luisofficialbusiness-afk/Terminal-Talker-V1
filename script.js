@@ -68,8 +68,8 @@ input.addEventListener("keydown", async (e)=>{
     if(cmd === "!help"){
       print("💻 Terminal Talker V4 Commands 💻");
       print("!usernameset <name> — Set your username");
-      print("!login admin01 — Login as Admin");
-      print("!ownlogin STUC02526 — Login as Owner");
+      print("!login — Login as Admin");
+      print("!ownlogin — Login as Owner");
       print("!logout — Logout from Admin/Owner");
       print("!join <room> — Join a chat room");
       print("!rooms — List all available rooms");
