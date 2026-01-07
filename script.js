@@ -105,14 +105,14 @@ input.addEventListener("keydown", async e => {
     if (text === "!help") {
       print("Commands:");
       print("!usernameset <name>");
-      print("!login ");
-      print("!ownlogin ");
-      print("!betalogin BETA2026");
+      print("!login - Login as Admin");
+      print("!ownlogin - Login as Website Owner");
+      print("!betalogin BETA2026 - Get Beta Features");
       print("!theme neon");
       print("!makeroom <password> (Beta only)");
       print("!pjoin <password>");
-      print("!saysystem <msg> (Owner only)");
-      print("!resetserver (Owner only)");
+      print("!saysystem <msg> (R-Owner and Website Owner only)");
+      print("!resetserver (Website Owner only)");
       print("!mute <username>");
       return;
     }
