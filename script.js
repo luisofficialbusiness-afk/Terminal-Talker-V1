@@ -1,195 +1,186 @@
 const terminal = document.getElementById("terminal");
 const input = document.getElementById("input");
 
+/* ---------------- CONFIG ---------------- */
+const WEBSITE_OWNER_PASS = "STUC02526";
+const WEBSITE_ADMIN_PASS = "admin01";
+const BETA_PASS = "BETA2026";
+const EARLY_ACCESS_OPEN = true;
+
 /* ---------------- STATE ---------------- */
-let username = localStorage.getItem("username") || "Guest";
-let currentRoom = "general";
-let isAdmin = false;
-let isOwner = false;
+let username = localStorage.getItem("tt_username") || "Guest";
+let roles = {
+  websiteOwner: false,
+  websiteAdmin: false,
+  roomOwner: false,
+  roomAdmin: false
+};
 let isBeta = false;
-let lockdownActive = false;
-let lastLine = null;
-const privateRooms = {};
 let neonTheme = false;
+let isEarlyUser = localStorage.getItem("tt_early") === "true";
+let currentRoom = "general";
+let rooms = ["general"];
 
-/* ---------------- PRINT ---------------- */
-function print(msg, track = false) {
-  const div = document.createElement("div");
-
-  if (neonTheme) {
-    div.innerHTML = `<span style="background:linear-gradient(90deg,#ff00ff,#00ffff,#00ff00,#ffff00,#ff0000);
-      -webkit-background-clip:text;color:transparent">${msg}</span>`;
-  } else {
-    div.innerHTML = msg;
-  }
-
-  terminal.appendChild(div);
-  terminal.scrollTop = terminal.scrollHeight;
-  if (track) lastLine = div;
+/* ---------------- EARLY USER ---------------- */
+if (!localStorage.getItem("tt_seen") && EARLY_ACCESS_OPEN) {
+  localStorage.setItem("tt_early", "true");
+  localStorage.setItem("tt_seen", "true");
+  isEarlyUser = true;
 }
 
-/* ---------------- BADGES ---------------- */
+/* ---------------- BADGE ---------------- */
 function badge() {
-  if (isOwner) return "<span style='color:yellow'>[OWNER]</span>";
-  if (isAdmin) return "<span style='color:cyan'>[ADMIN]</span>";
-  if (isBeta) return "<span style='color:purple'>[BETA]</span>";
+  if (roles.websiteOwner) return "[OWNER]";
+  if (roles.websiteAdmin) return "[ADMIN]";
+  if (roles.roomOwner) return "[R-OWNER]";
+  if (roles.roomAdmin) return "[R-ADMIN]";
+  if (isBeta) return "[BETA]";
+  if (isEarlyUser) return "[EARLY]";
   return "";
 }
 
-/* ---------------- WEBSOCKET ---------------- */
-const protocol = location.protocol === "https:" ? "wss" : "ws";
-const ws = new WebSocket(`${protocol}://${location.host}/api/rooms`);
-
-ws.onopen = () => {
-  print("✅ Connected to Terminal Talker V4");
-};
-
-ws.onerror = () => {
-  print("❌ WebSocket error – messages may not send");
-};
-
-ws.onmessage = (e) => {
-  const data = JSON.parse(e.data);
-
-  if (data.lockdown !== undefined) {
-    lockdownActive = data.lockdown;
-    return;
+/* ---------------- PRINT ---------------- */
+function print(msg, system = false) {
+  const div = document.createElement("div");
+  if (system) {
+    div.innerHTML = `<span style="background:linear-gradient(90deg,red,orange,yellow,green,cyan,blue,violet);
+      -webkit-background-clip:text;color:transparent">[SYSTEM] ${msg}</span>`;
+  } else if (neonTheme) {
+    div.innerHTML = `<span style="background:linear-gradient(90deg,#ff00ff,#00ffff,#00ff00);
+      -webkit-background-clip:text;color:transparent">${msg}</span>`;
+  } else {
+    div.textContent = msg;
   }
+  terminal.appendChild(div);
+  terminal.scrollTop = terminal.scrollHeight;
+}
 
-  if (data.room === currentRoom && data.content) {
-    print(data.content);
+/* ---------------- FETCH MESSAGES ---------------- */
+async function fetchMessages() {
+  try {
+    const res = await fetch(`/api/messages?room=${currentRoom}`);
+    if (!res.ok) throw new Error("Failed to fetch messages");
+    const data = await res.json();
+    terminal.innerHTML = "";
+    data.forEach(m => {
+      print(`[${m.user}] ${m.text}`, m.system);
+    });
+  } catch (err) {
+    print("[SYSTEM] Could not fetch messages", true);
+    console.error(err);
   }
-};
+}
+setInterval(fetchMessages, 1500);
 
-/* ---------------- INPUT HANDLER (FIXED) ---------------- */
-input.addEventListener("keydown", (e) => {
+/* ---------------- SEND ---------------- */
+async function send(text, system = false, userOverride = null) {
+  try {
+    await fetch("/api/send", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        room: currentRoom,
+        user: (userOverride || username) + " " + badge(),
+        text,
+        system
+      })
+    });
+  } catch (err) {
+    print("[SYSTEM] Could not send message", true);
+    console.error(err);
+  }
+}
+
+/* ---------------- INPUT HANDLER ---------------- */
+input.addEventListener("keydown", async e => {
   if (e.key !== "Enter") return;
 
   const text = input.value.trim();
   input.value = "";
   if (!text) return;
 
-  if (lockdownActive) {
-    print("⚠ Terminal Talker is in lockdown.");
-    return;
-  }
-
-  print(`[${username}] ${badge()} [${currentRoom}] > ${text}`, true);
-
-  /* -------- COMMANDS -------- */
+  /* ---------------- COMMANDS ---------------- */
   if (text.startsWith("!")) {
-
+    // Help
     if (text === "!help") {
-      print("📘 Commands:");
+      print("Commands:");
       print("!usernameset <name>");
-      print("!login admin01");
-      print("!ownlogin STUC02526");
-      print("!logout");
+      print("!login ");
+      print("!ownlogin ");
       print("!betalogin BETA2026");
-      print("!theme neon (beta only)");
-      print("!makeroom <room> <pass>");
-      print("!pjoin <room> <pass>");
-      print("!saysystem <msg> (owner)");
-      print("!resetserver (owner)");
+      print("!theme neon");
+      print("!makeroom <password> (Beta only)");
+      print("!pjoin <password>");
+      print("!saysystem <msg> (Owner only)");
+      print("!resetserver (Owner only)");
+      print("!mute <username>");
       return;
     }
 
+    // Username
     if (text.startsWith("!usernameset ")) {
-      username = text.slice(13).trim();
-      localStorage.setItem("username", username);
+      username = text.slice(13);
+      localStorage.setItem("tt_username", username);
       print(`Username set to ${username}`);
       return;
     }
 
-    if (text === "!login admin01") {
-      isAdmin = true;
-      print("Admin logged in");
+    // Website Admin
+    if (text === `!login ${WEBSITE_ADMIN_PASS}`) {
+      roles.websiteAdmin = true;
+      print("Website Admin logged in");
       return;
     }
 
-    if (text === "!ownlogin STUC02526") {
-      isAdmin = true;
-      isOwner = true;
-      print("Owner logged in");
+    // Website Owner
+    if (text === `!ownlogin ${WEBSITE_OWNER_PASS}`) {
+      roles.websiteOwner = true;
+      roles.websiteAdmin = true;
+      print("Website Owner logged in");
       return;
     }
 
-    if (text === "!logout") {
-      isAdmin = false;
-      isOwner = false;
-      isBeta = false;
-      neonTheme = false;
-      print("Logged out");
-      return;
-    }
-
-    if (text === "!betalogin BETA2026") {
+    // Beta Login
+    if (text === `!betalogin ${BETA_PASS}`) {
       isBeta = true;
-      print("🧪 Beta Tester activated");
+      print("Beta tester activated");
       return;
     }
 
+    // Neon Theme
     if (text === "!theme neon") {
-      if (!isBeta) return print("Beta only theme");
+      if (!isBeta) return print("Beta only feature");
       neonTheme = true;
-      print("🌈 Neon theme enabled");
+      print("Neon theme enabled");
       return;
     }
 
-    if (text.startsWith("!makeroom ")) {
-      if (!isBeta) return print("Beta only command");
-      const [, room, pass] = text.split(" ");
-      if (!room || !pass) return print("Usage: !makeroom <room> <pass>");
-      privateRooms[room] = pass;
-      currentRoom = room;
-      ws.send(JSON.stringify({ action: "join", room }));
-      print(`🔒 Private room "${room}" created`);
-      return;
-    }
-
-    if (text.startsWith("!pjoin ")) {
-      const [, room, pass] = text.split(" ");
-      if (privateRooms[room] !== pass) return print("❌ Wrong password");
-      currentRoom = room;
-      ws.send(JSON.stringify({ action: "join", room }));
-      print(`✅ Joined ${room}`);
-      return;
-    }
-
+    // Say System
     if (text.startsWith("!saysystem ")) {
-      if (!isOwner) return print("Owner only");
-      const msg = text.slice(11);
-      ws.send(JSON.stringify({
-        action: "say",
-        room: currentRoom,
-        user: "System",
-        message: msg
-      }));
-      print(`🌐 [System] ${msg}`);
+      if (!roles.websiteOwner) return print("Owner only");
+      await send(text.slice(11), true, "System");
       return;
     }
 
+    // Reset Server
     if (text === "!resetserver") {
-      if (!isOwner) return print("Owner only");
-      ws.send(JSON.stringify({ action: "resetServer" }));
-      print("♻ Server reset");
+      if (!roles.websiteOwner) return print("Owner only");
+      await send("Server reset by owner", true, "System");
       return;
     }
 
-    print("❓ Unknown command");
+    // Mute
+    if (text.startsWith("!mute ")) {
+      const target = text.slice(6);
+      if (!roles.websiteAdmin && !roles.roomOwner && !roles.roomAdmin) return print("No permission");
+      print(`${target} muted (demo)`); // placeholder
+      return;
+    }
+
+    print("Unknown command");
     return;
   }
 
-  /* -------- NORMAL MESSAGE (FIXED) -------- */
-  if (ws.readyState !== 1) {
-    print("❌ Not connected to server");
-    return;
-  }
-
-  ws.send(JSON.stringify({
-    action: "say",
-    room: currentRoom,
-    user: username,
-    message: text
-  }));
+  /* ---------------- NORMAL MESSAGE ---------------- */
+  await send(text);
 });
