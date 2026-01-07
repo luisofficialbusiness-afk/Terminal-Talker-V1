@@ -66,7 +66,7 @@ async function fetchMessages() {
       print(`[${m.user}] ${m.text}`, m.system);
     });
   } catch (err) {
-    print("[SYSTEM] Could not fetch messages", true);
+    print("[SYSTEM] Could not fetch messages,  Please make a bug report in the Discord Server", true);
     console.error(err);
   }
 }
