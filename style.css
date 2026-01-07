@@ -5,6 +5,7 @@ body { margin:0; background:var(--bg); color:var(--text); font-family:monospace;
 .system { color:gray; font-style:italic; }
 .admin-badge { color:cyan; font-weight:bold; }
 .owner-badge { color:yellow; font-weight:bold; }
+.beta-badge { color:purple; font-weight:bold; }
 .username { color:white; }
 .room-badge { color:#ffbf00; font-style:italic; }
 
@@ -23,3 +24,4 @@ body { margin:0; background:var(--bg); color:var(--text); font-family:monospace;
 .lockdown-box { text-align:center; }
 #lockdown-code { padding:10px; font-size:16px; margin-top:10px; }
 #lockdown-submit { padding:10px 20px; font-size:16px; margin-top:5px; cursor:pointer; }
+
