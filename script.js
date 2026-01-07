@@ -34,7 +34,6 @@ const ws=new WebSocket(`${protocol}://${location.host}/api/rooms`);
 ws.onmessage=(event)=>{
   const data=JSON.parse(event.data);
 
-  // Lockdown
   if(data.lockdown!==undefined){
     lockdownActive=data.lockdown;
     document.getElementById("lockdown-overlay").style.display=lockdownActive?"flex":"none";
@@ -63,9 +62,27 @@ input.addEventListener("keydown", async (e)=>{
 
   print(`[${terminalUsername}] ${badge()} ${roomBadge()} > ${cmd}`, true);
 
-  // ---------------- COMMANDS ----------------
   if(cmd.startsWith("!")){
-    if(cmd==="!help"){ /* show help */ return; }
+    if(cmd === "!help"){
+      print("💻 Terminal Talker V4 Commands 💻");
+      print("!usernameset <name> — Set your username");
+      print("!login admin01 — Login as Admin");
+      print("!ownlogin STUC02526 — Login as Owner");
+      print("!logout — Logout from Admin/Owner");
+      print("!join <room> — Join a chat room");
+      print("!rooms — List all available rooms");
+      print("!theme green|amber|red|blue|reset — Change terminal theme");
+      print("!edit last <message> — Edit your last message");
+      print("!mute <user> <seconds> — Admin only");
+      print("!lockdown — Admin only");
+      print("!system <message> — Admin only system message");
+      print("!history1 — Owner only, view chat history");
+      print("!history2 — Owner only, view mod log history");
+      print("!globalmessage <message> — Owner only, broadcast global message");
+      print("Normal messages — Type anything without ! to chat in the room");
+      return;
+    }
+
     if(cmd.startsWith("!usernameset ")){ terminalUsername=cmd.slice(13).trim().slice(0,20); localStorage.setItem("username",terminalUsername); print(`Username set to "${terminalUsername}"`); return; }
     if(cmd==="!login admin01"){ isAdmin=true; isOwner=false; print("Admin logged in."); return;}
     if(cmd==="!ownlogin STUC02526"){ isAdmin=true; isOwner=true; print("Owner logged in."); return;}
@@ -78,10 +95,12 @@ input.addEventListener("keydown", async (e)=>{
     if(cmd==="!history2"&&isOwner){ ws.send(JSON.stringify({action:"history2", room:currentRoom})); return;}
     if(cmd.startsWith("!globalmessage ")&&isOwner){ ws.send(JSON.stringify({action:"global", room:currentRoom, message:cmd.slice(15)})); return;}
     if(cmd==="!lockdown" && isAdmin){ ws.send(JSON.stringify({action:"lockdown", status:true})); print("Lockdown activated for all users!"); return;}
+    if(cmd.startsWith("!system ")){ if(!isAdmin){print("Admin only."); return;} print(`<span class="system">[SYSTEM] ${cmd.slice(8)}</span>`); return;}
+    if(cmd.startsWith("!edit last ")){ if(!lastUserLine){ print("Nothing to edit."); return;} lastUserLine.innerHTML=`[${terminalUsername}] ${badge()} ${roomBadge()} > ${cmd.slice(11)}`; return;}
+    
     print("Unknown command."); return;
   }
 
-  // ---------------- NORMAL MESSAGE ----------------
   if(isMuted(terminalUsername)){ print("You are muted."); return; }
   ws.send(JSON.stringify({action:"say", room:currentRoom, user:terminalUsername, message:cmd}));
 });
