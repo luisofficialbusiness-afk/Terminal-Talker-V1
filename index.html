@@ -1,19 +1,35 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-  <title>Terminal Talker V4</title>
-  <link rel="stylesheet" href="style.css">
+  <meta charset="UTF-8" />
+  <title>Terminal Talker V1</title>
+  <link rel="stylesheet" href="style.css" />
 </head>
 <body>
-  <div id="terminal"></div>
-  <input id="input" placeholder="Type here to chat or !help" autofocus />
 
-  <!-- Lockdown overlay -->
-  <div id="lockdown-overlay" style="display:none;">
-    <div class="lockdown-box">
-      <h1>⚠ Terminal Talker is currently in LOCKDOWN ⚠</h1>
-      <input id="lockdown-code" placeholder="Enter admin code" />
-      <button id="lockdown-submit">Submit</button>
+  <div id="container">
+    <!-- Sidebar -->
+    <div id="sidebar">
+      <pre>┌─────────────┐
+│ Sidebar │
+│──────────────│
+│ Themes │
+│ Report │
+│ Discord Link │
+└─────────────┘</pre>
+      <div class="sidebar-button" data-action="themes">Themes</div>
+      <div class="sidebar-button" data-action="report">Report</div>
+      <div class="sidebar-button" data-action="discord">Discord Link</div>
+    </div>
+
+    <!-- Main Terminal -->
+    <div id="main-terminal">
+      <div id="terminal">
+        <div id="server-messages"></div>
+        <div id="typing-indicator"></div>
+        <div id="local-messages"></div>
+      </div>
+      <input id="input" placeholder="Type message or command..." autofocus />
     </div>
   </div>
 
