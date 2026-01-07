@@ -4,7 +4,7 @@ const input = document.getElementById("input");
 /* ---------------- CONFIG ---------------- */
 const WEBSITE_OWNER_PASS = "O#0363168";
 const WEBSITE_ADMIN_PASS = "admin01";
-const BETA_PASS = "BETA2026";
+const BETA_PASS = "BETAPROGRAM";
 const EARLY_ACCESS_OPEN = true;
 
 /* ---------------- STATE ---------------- */
