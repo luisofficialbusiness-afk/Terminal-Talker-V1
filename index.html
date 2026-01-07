@@ -7,6 +7,12 @@
 <body>
   <div id="terminal"></div>
   <input id="input" placeholder="Type !help" autofocus />
-  <script src="script.js"></script>
-</body>
-</html>
+
+  <!-- Lockdown overlay -->
+  <div id="lockdown-overlay" style="display:none;">
+    <div class="lockdown-box">
+      <h1>⚠ Terminal Talker is currently in LOCKDOWN ⚠</h1>
+      <input id="lockdown-code" placeholder="Enter admin code" />
+      <button id="lockdown-submit">Submit</button>
+    </div>
+  </div>
